@@ -1,0 +1,7 @@
+Idea for reward:
+
+1. +1 if score+1, -1000 if crash
+
+2. +1 if score+1, -1 if crash, 0.1 if survive 1 more step
+
+3. 1 if survive(?) when score+1, -1 if crash. Init 0.1
