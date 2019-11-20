@@ -8,7 +8,7 @@ from pygame.locals import *
 from my_agent import *
 
 
-FPS = 100
+FPS = 100000
 SCREENWIDTH  = 288
 SCREENHEIGHT = 512
 PIPEGAPSIZE  = 100 # gap between upper and lower part of pipe
@@ -181,9 +181,9 @@ class GameState():
 
     
     def get_inp(self):
-        x = [self.playerx - lPipe['x'] for lPipe in self.lowerPipes]
-        y = [self.playery - lPipe['y'] for lPipe in self.lowerPipes]
-        return self.playery,x,y
+        x = [lPipe['x'] - self.playerx for lPipe in self.lowerPipes]
+        y = [lPipe['y'] - self.playery for lPipe in self.lowerPipes]
+        return x,y
 
     def next_state(self,action):
         '''Return self,reward,not_crash
@@ -192,6 +192,16 @@ class GameState():
             if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
                 pygame.quit()
                 sys.exit()
+            # Utility step: Change framerate to observe what's happening
+            if event.type == KEYDOWN and (event.key == K_f):
+                global FPS
+                if FPS == 100:
+                    FPS = 300
+                elif FPS == 300:
+	                FPS = 100000
+                else:
+                    FPS = 100
+            	
         if action:
             if self.playery > -2 * IMAGES['player'][0].get_height():
                 self.playerVelY = self.playerFlapAcc
@@ -374,4 +384,8 @@ def getHitmask(image):
     return mask
 
 if __name__ == '__main__':
+	#TODO: add argparse:
+	# --no-graphics
+	# --test
+	# --agent=<random|human|baseline|*final>
     main()
