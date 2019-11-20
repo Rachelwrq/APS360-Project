@@ -6,6 +6,8 @@
 import math, pygame, sys, os, copy, time, random
 import pygame.gfxdraw
 from pygame.locals import *
+import ai
+from ai import *
 
 ## Constants, yo ##
 
@@ -659,7 +661,14 @@ def endScreen(score, winorlose):
                     return
                 elif event.key == K_ESCAPE:
                     terminate()
-        
+
+def init():
+    global FPSCLOCK, DISPLAYSURF, DISPLAYRECT, MAINFONT
+    pygame.init()
+    FPSCLOCK = pygame.time.Clock()
+    pygame.display.set_caption('Puzzle Bobble')
+    MAINFONT = pygame.font.SysFont('Helvetica', TEXTHEIGHT)
+    DISPLAYSURF, DISPLAYRECT = makeDisplay()
         
 if __name__ == '__main__':
     main()
