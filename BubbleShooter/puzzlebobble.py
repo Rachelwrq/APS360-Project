@@ -609,14 +609,15 @@ def main():
     keep_train = True
 
     while keep_train:
-        #pygame.event.pump
+        pygame.event.pump()
         direction, launchBubble, newBubble, arrow, bubbleArray, nextBubble, score, alive, shots, getout, loss_game = restartGame()
         state = gameState(bubbleArray, newBubble.color)
         not_lose = True
         action = None
         launchBubble = True
         while not_lose:
-            action = agent.Action(state, score, not_lose)
+            pygame.event.pump()
+            action = agent.Action(state, score, not_lose, is_train = True)
             if alive == 'lose':
                 not_lose = False
                 break
