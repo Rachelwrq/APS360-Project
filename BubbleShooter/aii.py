@@ -9,7 +9,7 @@ import torch.nn.functional as F
 import puzzlebobble
 from puzzlebobble import *
 import torch.optim as optim
-
+import pickle
 
 # Settings of the game
 FPS          = 120
@@ -286,7 +286,7 @@ class CNNAgent():
         #temp variable, use only once at the 1st iter
         self.init_state = None
     
-    def Action(self,env,score,not_lose,is_train=False):
+    def Action(self,env,score,not_lose,sameColor,is_train=False):
         cur_reward = 1
         if self.iter == 0:
             #Fist iteration, just save the init_state
@@ -307,6 +307,8 @@ class CNNAgent():
             if not_lose:
                 if score > self.score:
                     cur_reward = (score - self.score) * 2
+                elif sameColor:
+                    cur_reward = 10
                 else:
                     cur_reward = -10
             else:
@@ -353,8 +355,9 @@ class CNNAgent():
                     #Save training loss across the whole replay_ mem at the end of every game
                     #self.loss_history.append(batch_loss)
                 
-                if self.iter %10000 == 0:
+                if self.iter %10 == 0:
                     # Model checkpoint
+                    print("save!")
                     torch.save(self.model.state_dict(), self.model_file)
                     with open(self.replay_mem_file, 'wb') as f:
                         pickle.dump(self.replay_mem, f)

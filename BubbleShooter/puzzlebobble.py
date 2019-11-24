@@ -615,9 +615,11 @@ def main():
         not_lose = True
         action = None
         launchBubble = True
+        deleteList = []
+        sameColor = False
         while not_lose:
             pygame.event.pump()
-            action, reward_score = agent.Action(state, score.total, not_lose, is_train = True)
+            action, reward_score = agent.Action(state, score.total, not_lose, sameColor, is_train = True)
             if alive == 'lose':
                 not_lose = False
                 break
@@ -626,6 +628,10 @@ def main():
             bubbleArray, alive, deleteList, nextBubble, score = processGame(launchBubble, newBubble, bubbleArray, score, arrow, direction, alive, True, 0)
             newBubble = Bubble(nextBubble.color)
             state = gameState(bubbleArray, newBubble.color)
+            if (len(deleteList) == 2):
+                sameColor = True
+            else:
+                sameColor = False
             
 
 
