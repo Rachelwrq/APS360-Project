@@ -617,7 +617,7 @@ def main():
         launchBubble = True
         while not_lose:
             pygame.event.pump()
-            action = agent.Action(state, score, not_lose, is_train = True)
+            action, reward_score = agent.Action(state, score.total, not_lose, is_train = True)
             if alive == 'lose':
                 not_lose = False
                 break

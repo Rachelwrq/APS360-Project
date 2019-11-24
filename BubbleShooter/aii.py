@@ -287,6 +287,7 @@ class CNNAgent():
         self.init_state = None
     
     def Action(self,env,score,not_lose,is_train=False):
+        cur_reward = 1
         if self.iter == 0:
             #Fist iteration, just save the init_state
             self.init_state = self._get_network_input(env)
@@ -304,12 +305,12 @@ class CNNAgent():
             
             cur_reward = 1
             if not_lose:
-                if score.total > self.score.total:
-                    cur_reward = exp(score.total - self.score.total)
+                if score > self.score:
+                    cur_reward = (score - self.score) * 2
                 else:
-                    cur_reward = -1
+                    cur_reward = -10
             else:
-                cur_reward = -50
+                cur_reward = -100
             
             prev_action = self.action
             
@@ -367,7 +368,7 @@ class CNNAgent():
         
         self.iter += 1
         self.score = score
-        return self.action
+        return self.action, cur_reward
     
     def _get_network_output(self,network_inp):
         network_inp = torch.tensor(network_inp).float()
