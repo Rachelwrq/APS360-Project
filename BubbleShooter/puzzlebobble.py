@@ -152,147 +152,6 @@ class Score(object):
         DISPLAYSURF.blit(self.render, self.rect)
 
 
-
-def main():
-    global FPSCLOCK, DISPLAYSURF, DISPLAYRECT, MAINFONT
-    pygame.init()
-    FPSCLOCK = pygame.time.Clock()
-    pygame.display.set_caption('Puzzle Bobble')
-    MAINFONT = pygame.font.SysFont('Helvetica', TEXTHEIGHT)
-    DISPLAYSURF, DISPLAYRECT = makeDisplay()
-    
-    
-
-    while True:
-        score, winorlose = runGame()
-        endScreen(score, winorlose)
-
-
-
-def runGame():
-    musicList =['bgmusic.ogg', 'Utopian_Theme.ogg', 'Goofy_Theme.ogg']
-    pygame.mixer.music.load(musicList[0])
-    pygame.mixer.music.play()
-    track = 0
-    gameColorList = copy.deepcopy(COLORLIST)
-    direction = None
-    launchBubble = False
-    newBubble = None
-    
-    
-    
-    arrow = Arrow()
-    bubbleArray = makeBlankBoard()
-    setBubbles(bubbleArray, gameColorList)
-    
-    nextBubble = Bubble(gameColorList[0])
-    nextBubble.rect.right = WINDOWWIDTH - 5
-    nextBubble.rect.bottom = WINDOWHEIGHT - 5
-
-    score = Score()
-    
-    
-    
-   
-    while True:
-        DISPLAYSURF.fill(BGCOLOR)
-        
-        for event in pygame.event.get():
-            if event.type == QUIT:
-                terminate()
-                
-            elif event.type == KEYDOWN:
-                if (event.key == K_LEFT):
-                    direction = LEFT
-                elif (event.key == K_RIGHT):
-                    direction = RIGHT
-                    
-            elif event.type == KEYUP:
-                direction = None
-                if event.key == K_SPACE:
-                    launchBubble = True
-                elif event.key == K_ESCAPE:
-                    terminate()
-
-        if launchBubble == True:
-            if newBubble == None:
-                newBubble = Bubble(nextBubble.color)
-                newBubble.angle = arrow.angle
-                
-
-            newBubble.update()
-            newBubble.draw()
-            
-            
-            if newBubble.rect.right >= WINDOWWIDTH - 5:
-                newBubble.angle = 180 - newBubble.angle
-            elif newBubble.rect.left <= 5:
-                newBubble.angle = 180 - newBubble.angle
-            state = gameState(bubbleArray, newBubble.color)
-            state = np.reshape(state, (1, 8, GRIDSIZE * 2, ARRAYWIDTH * 2))
-            #print(state)
-            launchBubble, newBubble, score = stopBubble(bubbleArray, newBubble, launchBubble, score)
-            #print(gameState(bubbleArray, newBubble.color))
-            finalBubbleList = []
-            for row in range(len(bubbleArray)):
-                for column in range(len(bubbleArray[0])):
-                    if bubbleArray[row][column] != BLANK:
-                        finalBubbleList.append(bubbleArray[row][column])
-                        if bubbleArray[row][column].rect.bottom > (WINDOWHEIGHT - arrow.rect.height - 10):
-                            return score.total, 'lose'
-
-            
-            
-            if len(finalBubbleList) < 1:
-                return score.total, 'win'
-                                        
-                        
-            
-            gameColorList = updateColorList(bubbleArray)
-            random.shuffle(gameColorList)
-            
-                    
-                            
-            if launchBubble == False:
-                
-                nextBubble = Bubble(gameColorList[0])
-                nextBubble.rect.right = WINDOWWIDTH - 5
-                nextBubble.rect.bottom = WINDOWHEIGHT - 5
-
-        
-        
-                            
-        nextBubble.draw()
-        if launchBubble == True:
-            coverNextBubble()
-        
-        arrow.update(direction)
-        arrow.draw()
-
-
-        
-        setArrayPos(bubbleArray)
-        drawBubbleArray(bubbleArray)
-
-        score.draw()
-
-        if pygame.mixer.music.get_busy() == False:
-            if track == len(musicList) - 1:
-                track = 0
-            else:
-                track += 1
-
-            pygame.mixer.music.load(musicList[track])
-            pygame.mixer.music.play()
-
-            
-        
-        pygame.display.update()
-        FPSCLOCK.tick(FPS)
-
-
-
-
 def makeBlankBoard():
     array = []
     
@@ -437,9 +296,7 @@ def popFloaters(bubbleArray, copyOfBoard, column, row=0):
 
 
 def stopBubble(bubbleArray, newBubble, launchBubble, score):
-    deleteList = []
-    popSound = pygame.mixer.Sound('popcork.ogg')
-    
+    deleteList = []    
     for row in range(len(bubbleArray)):
         for column in range(len(bubbleArray[row])):
             
@@ -534,7 +391,6 @@ def stopBubble(bubbleArray, newBubble, launchBubble, score):
                     
                     if len(deleteList) >= 3:
                         for pos in deleteList:
-                            popSound.play()
                             row = pos[0]
                             column = pos[1]
                             bubbleArray[row][column] = BLANK
@@ -741,7 +597,7 @@ def gameState(bubbleArray, ballcolor):
         dimension = dimension + 1
     return state
 
-def my_main():
+def main():
     global FPSCLOCK, DISPLAYSURF, DISPLAYRECT, MAINFONT
     pygame.init()
     FPSCLOCK = pygame.time.Clock()
@@ -753,6 +609,7 @@ def my_main():
     keep_train = True
 
     while keep_train:
+        #pygame.event.pump
         direction, launchBubble, newBubble, arrow, bubbleArray, nextBubble, score, alive, shots, getout, loss_game = restartGame()
         state = gameState(bubbleArray, newBubble.color)
         not_lose = True
@@ -845,4 +702,4 @@ def processGame(launchBubble, newBubble, bubbleArray, score, arrow, direction, a
     return bubbleArray, alive, deleteList, nextBubble, score
     
 if __name__ == '__main__':
-    my_main()
+    main()
