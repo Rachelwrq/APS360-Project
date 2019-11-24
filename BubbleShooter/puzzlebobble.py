@@ -123,7 +123,7 @@ class Arrow(pygame.sprite.Sprite):
 
     def update(self, direction):
         self.angle = direction
-        
+
         self.transformImage = pygame.transform.rotate(self.image, self.angle)
         self.rect = self.transformImage.get_rect()
         self.rect.centerx = STARTX 
@@ -750,8 +750,9 @@ def my_main():
     DISPLAYSURF, DISPLAYRECT = makeDisplay()
 
     agent = CNNAgent(is_baseline=False)
+    keep_train = True
 
-    while True:
+    while keep_train:
         direction, launchBubble, newBubble, arrow, bubbleArray, nextBubble, score, alive, shots, getout, loss_game = restartGame()
         state = gameState(bubbleArray, newBubble.color)
         not_lose = True
@@ -767,7 +768,6 @@ def my_main():
             bubbleArray, alive, deleteList, nextBubble, score = processGame(launchBubble, newBubble, bubbleArray, score, arrow, direction, alive, True, 0)
             newBubble = Bubble(nextBubble.color)
             state = gameState(bubbleArray, newBubble.color)
-            
             
 
 
@@ -797,6 +797,7 @@ def processGame(launchBubble, newBubble, bubbleArray, score, arrow, direction, a
 
     if launchBubble == True:
         while True:
+            DISPLAYSURF.fill(BGCOLOR)
             newBubble.update()
             if display == True:
                 newBubble.draw()
@@ -818,7 +819,7 @@ def processGame(launchBubble, newBubble, bubbleArray, score, arrow, direction, a
 
             if len(finalBubbleList) < 1:
                 alive = 'win'
-        time.sleep(slowness)									  
+        #time.sleep(slowness)									  
         gameColorList = updateColorList(bubbleArray)
         random.shuffle(gameColorList)
 
