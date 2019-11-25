@@ -311,8 +311,6 @@ class CNNAgent():
                 else:
                     if num_cancel == 0:
                         cur_reward = -20
-                    elif num_cancel < 0:
-                        cur_reward = num_cancel * 20
                     else:
                         cur_reward = num_cancel * 10
             else:
