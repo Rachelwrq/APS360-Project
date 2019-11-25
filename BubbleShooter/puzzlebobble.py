@@ -50,7 +50,8 @@ BLACK    = (  0,   0,   0)
 COMBLUE  = (233, 232, 255)
 
 BGCOLOR    = WHITE
-COLORLIST = [RED, GREEN, BLUE, YELLOW, ORANGE, PURPLE, CYAN]
+#COLORLIST = [RED, GREEN, BLUE, YELLOW, ORANGE, PURPLE, CYAN]
+COLORLIST = [RED, GREEN, BLUE]
      
 
 class Bubble(pygame.sprite.Sprite):
@@ -530,7 +531,7 @@ def init():
 # getting the current game state
 def gameState(bubbleArray, ballcolor):
     dimension = 0
-    state = np.ones((8, GRIDSIZE * 2, ARRAYWIDTH * 2)) * -1
+    state = np.ones((4, GRIDSIZE * 2, ARRAYWIDTH * 2)) * -1
     for colour in COLORLIST:
         counter = 0
         balls = 0
@@ -592,7 +593,7 @@ def gameState(bubbleArray, ballcolor):
             if state[dimension][row][column] < 0:
                 state[dimension][row][column] = -1 * 1/(float((GRIDSIZE * 2 * ARRAYWIDTH * 2) - 4. * balls))
     dimension = dimension + 1
-    for n in range(8 - len(COLORLIST) - 1):
+    for n in range(4 - len(COLORLIST) - 1):
         state[dimension] = np.zeros((GRIDSIZE * 2, ARRAYWIDTH * 2))
         dimension = dimension + 1
     return state
@@ -610,28 +611,40 @@ def main():
 
     while keep_train:
         pygame.event.pump()
-        direction, launchBubble, newBubble, arrow, bubbleArray, nextBubble, score, alive, shots, getout, loss_game = restartGame()
+        direction, launchBubble, newBubble, arrow, bubbleArray, nextBubble, score, alive, shots, getout, loss_game, num_alive = restartGame()
+        prev_alive = num_alive
         state = gameState(bubbleArray, newBubble.color)
         not_lose = True
         action = None
         launchBubble = True
         deleteList = []
         sameColor = False
+        firstAttempt = True
+        num_cancel = 0
         while not_lose:
             pygame.event.pump()
-            action, reward_score = agent.Action(state, score.total, not_lose, sameColor, is_train = True)
             if alive == 'lose':
                 not_lose = False
+                action, reward_score = agent.Action(state, score.total, num_cancel, alive, not_lose, sameColor, firstAttempt, is_train = True)
                 break
+            elif alive == 'win':
+                action, reward_score = agent.Action(state, score.total, num_cancel, alive, not_lose, sameColor, firstAttempt, is_train = True)
+                break
+            else:
+                action, reward_score = agent.Action(state, score.total, num_cancel, alive, not_lose, sameColor, firstAttempt, is_train = True)
+            print(reward_score)
             direction = (action * 8) + 10
             newBubble.angle = direction
-            bubbleArray, alive, deleteList, nextBubble, score = processGame(launchBubble, newBubble, bubbleArray, score, arrow, direction, alive, True, 0)
+            prev_alive = num_alive
+            bubbleArray, alive, deleteList, nextBubble, score, num_alive = processGame(launchBubble, newBubble, bubbleArray, score, arrow, direction, alive, True, 0)
             newBubble = Bubble(nextBubble.color)
             state = gameState(bubbleArray, newBubble.color)
             if (len(deleteList) == 2):
                 sameColor = True
             else:
                 sameColor = False
+            firstAttempt = False
+            num_cancel = prev_alive - num_alive
             
 
 
@@ -652,7 +665,13 @@ def restartGame():
     shots = 0
     getout = False
     loss_game = 0
-    return direction, launchBubble, newBubble, arrow, bubbleArray, nextBubble, score, alive, shots, getout, loss_game
+
+    finalBubbleList = []
+    for row in range(len(bubbleArray)):
+        for column in range(len(bubbleArray[0])):
+            if bubbleArray[row][column] != BLANK:
+                finalBubbleList.append(bubbleArray[row][column])
+    return direction, launchBubble, newBubble, arrow, bubbleArray, nextBubble, score, alive, shots, getout, loss_game, len(finalBubbleList)
 
 
 def processGame(launchBubble, newBubble, bubbleArray, score, arrow, direction, alive, display, slowness):
@@ -683,7 +702,7 @@ def processGame(launchBubble, newBubble, bubbleArray, score, arrow, direction, a
 
             if len(finalBubbleList) < 1:
                 alive = 'win'
-        #time.sleep(slowness)									  
+        #time.sleep(slowness)                                     
         gameColorList = updateColorList(bubbleArray)
         random.shuffle(gameColorList)
 
@@ -706,7 +725,7 @@ def processGame(launchBubble, newBubble, bubbleArray, score, arrow, direction, a
         pygame.display.update()
         FPSCLOCK.tick(FPS)
 
-    return bubbleArray, alive, deleteList, nextBubble, score
+    return bubbleArray, alive, deleteList, nextBubble, score, len(finalBubbleList)
     
 if __name__ == '__main__':
     main()

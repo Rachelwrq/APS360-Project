@@ -215,16 +215,16 @@ class CNN(nn.Module):
         #   - Horizontal distance to 1st and 2nd pipes
         #   - Vertical distance to 1st and 2nd lower pipes
         # Output has 2 neurons (each represents the Q-value of 1 action)
-        self.conv1 = nn.Conv2d(8, 8, 5) #the output should be 18*28
+        self.conv1 = nn.Conv2d(4, 4, 5) #the output should be 18*28
         self.pool = nn.MaxPool2d(2,2)#should be 9*14
         
-        self.fc1 = nn.Linear(8*9*14, 200)
-        self.fc2 = nn.Linear(200, 20)
+        self.fc1 = nn.Linear(4*9*14, 150)
+        self.fc2 = nn.Linear(150, 20)
         
     def forward(self, network_inp):
         x = F.relu(self.conv1(network_inp))
         x = self.pool(x)
-        x = x.view(-1, 8*9*14)
+        x = x.view(-1, 4*9*14)
         x = F.relu(self.fc1(x))
         return self.fc2(x)
 
@@ -257,6 +257,7 @@ class CNNAgent():
         self.epsilon = self.init_epsilon
         self.iter = 0 #To determine model checkpoint
         
+        self.same_count = 0
         self.score = 0
         
         # 3. Values for model checkpoint
@@ -286,7 +287,7 @@ class CNNAgent():
         #temp variable, use only once at the 1st iter
         self.init_state = None
     
-    def Action(self,env,score,not_lose,sameColor,is_train=False):
+    def Action(self,env,score,num_cancel,alive,not_lose,sameColor,firstAttempt,is_train=False):
         cur_reward = 1
         if self.iter == 0:
             #Fist iteration, just save the init_state
@@ -295,8 +296,8 @@ class CNNAgent():
         elif self.iter == 1:
             cur_state = self._get_network_input(env)
             self.replay_mem.append((self.init_state,0,cur_state,0.1))
-            if len(self.replay_mem) >= self.replay_mem_size:
-                self.replay_mem.pop(0)
+            # if len(self.replay_mem) >= self.replay_mem_size:
+            #     self.replay_mem.pop(0)
         else:
             # Update replay memory
             cur_state = self._get_network_input(env)
@@ -305,20 +306,39 @@ class CNNAgent():
             
             cur_reward = 1
             if not_lose:
-                if score > self.score:
+                if alive == 'win':
+                    cur_reward = 500
+                else:
+                    if num_cancel == 0:
+                        cur_reward = -20
+                    elif num_cancel < 0:
+                        cur_reward = num_cancel * 20
+                    else:
+                        cur_reward = num_cancel * 10
+            else:
+                cur_reward = -500
+
+                '''
+                elif score > self.score:
                     cur_reward = (score - self.score) * 2
+                    self.same_count = 0
                 elif sameColor:
-                    cur_reward = 10
+                    self.same_count += 1
+                    print(self.same_count)
+                    if self.same_count <= 5:
+                        cur_reward = 10
+                    else:
+                        cur_reward = -30
                 else:
                     cur_reward = -10
             else:
-                cur_reward = -100
-            
+                cur_reward = -500
+            '''
             prev_action = self.action
             
             self.replay_mem.append((prev_state,prev_action,cur_state,cur_reward))
-            if len(self.replay_mem) >= self.replay_mem_size:
-                self.replay_mem.pop(0)
+            # if len(self.replay_mem) >= self.replay_mem_size:
+            #     self.replay_mem.pop(0)
             
             # Decide on next action
             if random.random() <= self.epsilon:
@@ -341,7 +361,10 @@ class CNNAgent():
                 batch_q_predict = self.model(batch_prev_states).gather(-1,batch_actions.view(-1,1)).squeeze()
                 #q_actual = r + gamma * max_a'(Q(s',a'))
                 #         = cur_reward + gamma * model(cur_state).max(dim=1)
-                batch_q_actual = batch_cur_rewards + self.gamma * torch.max(self.model(batch_cur_states),dim=1)[0].detach()
+                if (firstAttempt):
+                    batch_q_actual = batch_cur_rewards
+                else:
+                    batch_q_actual = batch_cur_rewards + self.gamma * torch.max(self.model(batch_cur_states),dim=1)[0].detach()
                 
                 
                 #model training
@@ -355,7 +378,7 @@ class CNNAgent():
                     #Save training loss across the whole replay_ mem at the end of every game
                     #self.loss_history.append(batch_loss)
                 
-                if self.iter %10 == 0:
+                if self.iter %10000 == 0:
                     # Model checkpoint
                     print("save!")
                     torch.save(self.model.state_dict(), self.model_file)
