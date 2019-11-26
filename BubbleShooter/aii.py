@@ -11,6 +11,7 @@ from puzzlebobble import *
 import torch.optim as optim
 import pickle
 
+
 # Settings of the game
 FPS          = 120
 WINDOWWIDTH  = 640
@@ -219,7 +220,7 @@ class CNN(nn.Module):
         self.pool = nn.MaxPool2d(2,2)#should be 9*14
         
         self.fc1 = nn.Linear(4*9*14, 150)
-        self.fc2 = nn.Linear(150, 20)
+        self.fc2 = nn.Linear(150, 21)
         
     def forward(self, network_inp):
         x = F.relu(self.conv1(network_inp))
@@ -266,6 +267,9 @@ class CNNAgent():
         self.replay_mem_file = self.checkpoint_dir+"/replay_mem"
         self.loss_history = []
         self.loss_history_file = self.checkpoint_dir+"/loss_history"
+
+        self.score_record = []
+        self.score_file = self.checkpoint_dir+"/"+"score.csv"
         
         # Load model if exists
         if os.path.exists(self.model_file):
@@ -296,8 +300,8 @@ class CNNAgent():
         elif self.iter == 1:
             cur_state = self._get_network_input(env)
             self.replay_mem.append((self.init_state,0,cur_state,0.1))
-            # if len(self.replay_mem) >= self.replay_mem_size:
-            #     self.replay_mem.pop(0)
+            if len(self.replay_mem) >= self.replay_mem_size:
+                self.replay_mem.pop(0)
         else:
             # Update replay memory
             cur_state = self._get_network_input(env)
@@ -308,13 +312,15 @@ class CNNAgent():
             if not_lose:
                 if alive == 'win':
                     cur_reward = 500
+                    self.score_record.append(score)
                 else:
                     if num_cancel == 0:
-                        cur_reward = -20
+                        cur_reward = -10
                     else:
                         cur_reward = num_cancel * 10
             else:
                 cur_reward = -500
+                self.score_record.append(score)
 
                 '''
                 elif score > self.score:
@@ -335,13 +341,13 @@ class CNNAgent():
             prev_action = self.action
             
             self.replay_mem.append((prev_state,prev_action,cur_state,cur_reward))
-            # if len(self.replay_mem) >= self.replay_mem_size:
-            #     self.replay_mem.pop(0)
+            if len(self.replay_mem) >= self.replay_mem_size:
+                self.replay_mem.pop(0)
             
             # Decide on next action
             if random.random() <= self.epsilon:
                 #Exploration: With probability epsilon, choose random action
-                self.action = random.randint(0,19)
+                self.action = random.randint(0,20)
             else:
                 #Exploitation: Choose optimal action
                 network_out = self._get_network_output(cur_state)
@@ -382,6 +388,7 @@ class CNNAgent():
                     torch.save(self.model.state_dict(), self.model_file)
                     with open(self.replay_mem_file, 'wb') as f:
                         pickle.dump(self.replay_mem, f)
+                    np.savetxt(self.score_file, self.score_record)
                     #with open(self.loss_history_file, 'wb') as f:
                     #    pickle.dump(self.loss_history, f)
                 
@@ -423,7 +430,7 @@ class CNNAgent():
 # getting the current game state
 def gameState(bubbleArray, ballcolor):
     dimension = 0
-    state = np.ones((8, GRIDSIZE * 2, ARRAYWIDTH * 2)) * -1
+    state = np.ones((4, GRIDSIZE * 2, ARRAYWIDTH * 2)) * -1
     for colour in COLORLIST:
         counter = 0
         balls = 0
@@ -485,7 +492,7 @@ def gameState(bubbleArray, ballcolor):
             if state[dimension][row][column] < 0:
                 state[dimension][row][column] = -1 * 1/(float((GRIDSIZE * 2 * ARRAYWIDTH * 2) - 4. * balls))
     dimension = dimension + 1
-    for n in range(8 - len(COLORLIST) - 1):
+    for n in range(4 - len(COLORLIST) - 1):
         state[dimension] = np.zeros((GRIDSIZE * 2, ARRAYWIDTH * 2))
         dimension = dimension + 1
     return state

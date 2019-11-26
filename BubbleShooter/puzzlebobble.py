@@ -8,6 +8,7 @@ import pygame.gfxdraw
 from pygame.locals import *
 import aii
 from aii import *
+from datetime import datetime
 
 import numpy as np
 
@@ -608,7 +609,9 @@ def main():
 
     agent = CNNAgent(is_baseline=False)
     keep_train = True
-
+    # Returns a datetime object containing the local date and time
+    dateTimeObj = datetime.now()
+    print("start time: ",dateTimeObj)
     while keep_train:
         pygame.event.pump()
         direction, launchBubble, newBubble, arrow, bubbleArray, nextBubble, score, alive, shots, getout, loss_game, num_alive = restartGame()
@@ -628,11 +631,13 @@ def main():
                 action, reward_score = agent.Action(state, score.total, num_cancel, alive, not_lose, sameColor, firstAttempt, is_train = True)
                 break
             elif alive == 'win':
+                dateTimeObj = datetime.now()
+                print("win time: ",dateTimeObj)
                 action, reward_score = agent.Action(state, score.total, num_cancel, alive, not_lose, sameColor, firstAttempt, is_train = True)
                 break
             else:
                 action, reward_score = agent.Action(state, score.total, num_cancel, alive, not_lose, sameColor, firstAttempt, is_train = True)
-            print(reward_score)
+            # print(reward_score)
             direction = (action * 8) + 10
             newBubble.angle = direction
             prev_alive = num_alive
