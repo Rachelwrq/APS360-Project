@@ -6,8 +6,11 @@
 import math, pygame, sys, os, copy, time, random
 import pygame.gfxdraw
 from pygame.locals import *
-import ai
-from ai import *
+import aii
+from aii import *
+from datetime import datetime
+
+import numpy as np
 
 ## Constants, yo ##
 
@@ -23,6 +26,8 @@ STARTX = WINDOWWIDTH / 2
 STARTY = WINDOWHEIGHT - 27
 ARRAYWIDTH = 16
 ARRAYHEIGHT = 14
+
+GRIDSIZE = 11
 
 
 RIGHT = 'right'
@@ -46,7 +51,8 @@ BLACK    = (  0,   0,   0)
 COMBLUE  = (233, 232, 255)
 
 BGCOLOR    = WHITE
-COLORLIST = [RED, GREEN, BLUE, YELLOW, ORANGE, PURPLE, CYAN]
+#COLORLIST = [RED, GREEN, BLUE, YELLOW, ORANGE, PURPLE, CYAN]
+COLORLIST = [RED, GREEN, BLUE]
      
 
 class Bubble(pygame.sprite.Sprite):
@@ -118,11 +124,7 @@ class Arrow(pygame.sprite.Sprite):
 
 
     def update(self, direction):
-        
-        if direction == LEFT and self.angle < 180:
-            self.angle += 2
-        elif direction == RIGHT and self.angle > 0:        
-            self.angle -= 2
+        self.angle = direction
 
         self.transformImage = pygame.transform.rotate(self.image, self.angle)
         self.rect = self.transformImage.get_rect()
@@ -150,146 +152,6 @@ class Score(object):
 
     def draw(self):
         DISPLAYSURF.blit(self.render, self.rect)
-
-
-
-def main():
-    global FPSCLOCK, DISPLAYSURF, DISPLAYRECT, MAINFONT
-    pygame.init()
-    FPSCLOCK = pygame.time.Clock()
-    pygame.display.set_caption('Puzzle Bobble')
-    MAINFONT = pygame.font.SysFont('Helvetica', TEXTHEIGHT)
-    DISPLAYSURF, DISPLAYRECT = makeDisplay()
-    
-    
-
-    while True:
-        score, winorlose = runGame()
-        endScreen(score, winorlose)
-
-
-
-def runGame():
-    musicList =['bgmusic.ogg', 'Utopian_Theme.ogg', 'Goofy_Theme.ogg']
-    pygame.mixer.music.load(musicList[0])
-    pygame.mixer.music.play()
-    track = 0
-    gameColorList = copy.deepcopy(COLORLIST)
-    direction = None
-    launchBubble = False
-    newBubble = None
-    
-    
-    
-    arrow = Arrow()
-    bubbleArray = makeBlankBoard()
-    setBubbles(bubbleArray, gameColorList)
-    
-    nextBubble = Bubble(gameColorList[0])
-    nextBubble.rect.right = WINDOWWIDTH - 5
-    nextBubble.rect.bottom = WINDOWHEIGHT - 5
-
-    score = Score()
-    
-    
-    
-   
-    while True:
-        DISPLAYSURF.fill(BGCOLOR)
-        
-        for event in pygame.event.get():
-            if event.type == QUIT:
-                terminate()
-                
-            elif event.type == KEYDOWN:
-                if (event.key == K_LEFT):
-                    direction = LEFT
-                elif (event.key == K_RIGHT):
-                    direction = RIGHT
-                    
-            elif event.type == KEYUP:
-                direction = None
-                if event.key == K_SPACE:
-                    launchBubble = True
-                elif event.key == K_ESCAPE:
-                    terminate()
-
-        if launchBubble == True:
-            if newBubble == None:
-                newBubble = Bubble(nextBubble.color)
-                newBubble.angle = arrow.angle
-                
-
-            newBubble.update()
-            newBubble.draw()
-            
-            
-            if newBubble.rect.right >= WINDOWWIDTH - 5:
-                newBubble.angle = 180 - newBubble.angle
-            elif newBubble.rect.left <= 5:
-                newBubble.angle = 180 - newBubble.angle
-
-
-            launchBubble, newBubble, score = stopBubble(bubbleArray, newBubble, launchBubble, score)
-
-            finalBubbleList = []
-            for row in range(len(bubbleArray)):
-                for column in range(len(bubbleArray[0])):
-                    if bubbleArray[row][column] != BLANK:
-                        finalBubbleList.append(bubbleArray[row][column])
-                        if bubbleArray[row][column].rect.bottom > (WINDOWHEIGHT - arrow.rect.height - 10):
-                            return score.total, 'lose'
-
-            
-            
-            if len(finalBubbleList) < 1:
-                return score.total, 'win'
-                                        
-                        
-            
-            gameColorList = updateColorList(bubbleArray)
-            random.shuffle(gameColorList)
-            
-                    
-                            
-            if launchBubble == False:
-                
-                nextBubble = Bubble(gameColorList[0])
-                nextBubble.rect.right = WINDOWWIDTH - 5
-                nextBubble.rect.bottom = WINDOWHEIGHT - 5
-
-        
-        
-                            
-        nextBubble.draw()
-        if launchBubble == True:
-            coverNextBubble()
-        
-        arrow.update(direction)
-        arrow.draw()
-
-
-        
-        setArrayPos(bubbleArray)
-        drawBubbleArray(bubbleArray)
-
-        score.draw()
-
-        if pygame.mixer.music.get_busy() == False:
-            if track == len(musicList) - 1:
-                track = 0
-            else:
-                track += 1
-
-            pygame.mixer.music.load(musicList[track])
-            pygame.mixer.music.play()
-
-            
-        
-        pygame.display.update()
-        FPSCLOCK.tick(FPS)
-
-
 
 
 def makeBlankBoard():
@@ -436,9 +298,7 @@ def popFloaters(bubbleArray, copyOfBoard, column, row=0):
 
 
 def stopBubble(bubbleArray, newBubble, launchBubble, score):
-    deleteList = []
-    popSound = pygame.mixer.Sound('popcork.ogg')
-    
+    deleteList = []    
     for row in range(len(bubbleArray)):
         for column in range(len(bubbleArray[row])):
             
@@ -533,7 +393,6 @@ def stopBubble(bubbleArray, newBubble, launchBubble, score):
                     
                     if len(deleteList) >= 3:
                         for pos in deleteList:
-                            popSound.play()
                             row = pos[0]
                             column = pos[1]
                             bubbleArray[row][column] = BLANK
@@ -544,7 +403,7 @@ def stopBubble(bubbleArray, newBubble, launchBubble, score):
                     launchBubble = False
                     newBubble = None
 
-    return launchBubble, newBubble, score
+    return launchBubble, newBubble, score, deleteList
 
                     
 
@@ -669,6 +528,209 @@ def init():
     pygame.display.set_caption('Puzzle Bobble')
     MAINFONT = pygame.font.SysFont('Helvetica', TEXTHEIGHT)
     DISPLAYSURF, DISPLAYRECT = makeDisplay()
-        
+
+# getting the current game state
+def gameState(bubbleArray, ballcolor):
+    dimension = 0
+    state = np.ones((4, GRIDSIZE * 2, ARRAYWIDTH * 2)) * -1
+    for colour in COLORLIST:
+        counter = 0
+        balls = 0
+        if ballcolor == colour:
+            state[dimension][GRIDSIZE * 2 - 1][ARRAYWIDTH] = 1
+            state[dimension][GRIDSIZE * 2 - 1][ARRAYWIDTH + 1] = 1
+            state[dimension][GRIDSIZE * 2 - 2][ARRAYWIDTH] = 1
+            state[dimension][GRIDSIZE * 2 - 2][ARRAYWIDTH + 1] = 1
+            balls = balls + 1
+        for row in range(GRIDSIZE):
+            for column in range(len(bubbleArray[0])):
+                if bubbleArray[row][column] != BLANK and bubbleArray[row][column].color == colour:
+                    if counter % 2 == 0:
+                        state[dimension][row * 2][(2 * column)] = 1
+                        state[dimension][row * 2][(2 * column) + 1] = 1
+                        state[dimension][row * 2 + 1][(2 * column)] = 1
+                        state[dimension][row * 2 + 1][(2 * column) + 1] = 1
+                    elif counter % 2 != 0:
+                        state[dimension][row * 2][2 * column + 1] = 1
+                        state[dimension][row * 2][2 * column + 2] = 1
+                        state[dimension][row * 2 + 1][2 * column + 1] = 1
+                        state[dimension][row * 2 + 1][2 * column + 2] = 1
+                    balls = balls + 1
+            counter = counter + 1
+        for row in range(GRIDSIZE * 2):
+            for column in range(len(bubbleArray[0]) * 2):
+                if state[dimension][row][column] > 0:
+                    state[dimension][row][column] = 1/(float(balls) * 4.)
+                if state[dimension][row][column] < 0:
+                    state[dimension][row][column] = -1 * 1/float((GRIDSIZE * 2 * ARRAYWIDTH * 2) - 4. * balls)
+        dimension = dimension + 1
+
+    balls = 1 # shooting ball
+    counter = 0
+    state[dimension] = np.ones((GRIDSIZE * 2, ARRAYWIDTH * 2))
+    state[dimension][GRIDSIZE * 2 - 1][ARRAYWIDTH] = -1
+    state[dimension][GRIDSIZE * 2 - 1][ARRAYWIDTH + 1] = -1
+    state[dimension][GRIDSIZE * 2 - 2][ARRAYWIDTH] = -1
+    state[dimension][GRIDSIZE * 2 - 2][ARRAYWIDTH + 1] = -1
+    for row in range(GRIDSIZE):
+        for column in range(len(bubbleArray[0])):
+            if bubbleArray[row][column] != BLANK:
+                balls = balls + 1
+                if counter % 2 == 0:
+                    state[dimension][row * 2][(2 * column)] = -1
+                    state[dimension][row * 2][(2 * column) + 1] = -1
+                    state[dimension][row * 2 + 1][(2 * column)] = -1
+                    state[dimension][row * 2 + 1][(2 * column) + 1] = -1
+                elif counter % 2 != 0:
+                    state[dimension][row * 2][2 * column + 1] = -1
+                    state[dimension][row * 2][2 * column + 2] = -1
+                    state[dimension][row * 2 + 1][2 * column + 1] = -1
+                    state[dimension][row * 2 + 1][2 * column + 2] = -1
+        counter = counter + 1
+    for row in range(GRIDSIZE * 2):
+        for column in range(len(bubbleArray[0]) * 2):
+            if state[dimension][row][column] > 0:
+                state[dimension][row][column] = 1/(float(balls) * 4.)
+            if state[dimension][row][column] < 0:
+                state[dimension][row][column] = -1 * 1/(float((GRIDSIZE * 2 * ARRAYWIDTH * 2) - 4. * balls))
+    dimension = dimension + 1
+    for n in range(4 - len(COLORLIST) - 1):
+        state[dimension] = np.zeros((GRIDSIZE * 2, ARRAYWIDTH * 2))
+        dimension = dimension + 1
+    return state
+
+def main():
+    global FPSCLOCK, DISPLAYSURF, DISPLAYRECT, MAINFONT
+    pygame.init()
+    FPSCLOCK = pygame.time.Clock()
+    pygame.display.set_caption('Puzzle Bobble')
+    MAINFONT = pygame.font.SysFont('Helvetica', TEXTHEIGHT)
+    DISPLAYSURF, DISPLAYRECT = makeDisplay()
+
+    agent = CNNAgent(is_baseline=False)
+    keep_train = True
+    # Returns a datetime object containing the local date and time
+    dateTimeObj = datetime.now()
+    print("start time: ",dateTimeObj)
+    while keep_train:
+        pygame.event.pump()
+        direction, launchBubble, newBubble, arrow, bubbleArray, nextBubble, score, alive, shots, getout, loss_game, num_alive = restartGame()
+        prev_alive = num_alive
+        state = gameState(bubbleArray, newBubble.color)
+        not_lose = True
+        action = None
+        launchBubble = True
+        deleteList = []
+        sameColor = False
+        firstAttempt = True
+        num_cancel = 0
+        while not_lose:
+            pygame.event.pump()
+            if alive == 'lose':
+                not_lose = False
+                action, reward_score = agent.Action(state, score.total, num_cancel, alive, not_lose, sameColor, firstAttempt, is_train = True)
+                break
+            elif alive == 'win':
+                dateTimeObj = datetime.now()
+                print("win time: ",dateTimeObj)
+                action, reward_score = agent.Action(state, score.total, num_cancel, alive, not_lose, sameColor, firstAttempt, is_train = True)
+                break
+            else:
+                action, reward_score = agent.Action(state, score.total, num_cancel, alive, not_lose, sameColor, firstAttempt, is_train = True)
+            # print(reward_score)
+            direction = (action * 8) + 10
+            newBubble.angle = direction
+            prev_alive = num_alive
+            bubbleArray, alive, deleteList, nextBubble, score, num_alive = processGame(launchBubble, newBubble, bubbleArray, score, arrow, direction, alive, True, 0)
+            newBubble = Bubble(nextBubble.color)
+            state = gameState(bubbleArray, newBubble.color)
+            if (len(deleteList) == 2):
+                sameColor = True
+            else:
+                sameColor = False
+            firstAttempt = False
+            num_cancel = prev_alive - num_alive
+            
+
+
+def restartGame():
+    direction = None
+    launchBubble = False
+    gameColorList = copy.deepcopy(COLORLIST)
+    arrow = Arrow()
+    bubbleArray = makeBlankBoard()
+    setBubbles(bubbleArray, gameColorList)
+    nextBubble = Bubble(gameColorList[0])
+    nextBubble.rect.right = WINDOWWIDTH - 5
+    nextBubble.rect.bottom = WINDOWHEIGHT - 5
+    score = Score()
+    alive = "alive"
+    newBubble = Bubble(nextBubble.color)
+    newBubble.angle = arrow.angle
+    shots = 0
+    getout = False
+    loss_game = 0
+
+    finalBubbleList = []
+    for row in range(len(bubbleArray)):
+        for column in range(len(bubbleArray[0])):
+            if bubbleArray[row][column] != BLANK:
+                finalBubbleList.append(bubbleArray[row][column])
+    return direction, launchBubble, newBubble, arrow, bubbleArray, nextBubble, score, alive, shots, getout, loss_game, len(finalBubbleList)
+
+
+def processGame(launchBubble, newBubble, bubbleArray, score, arrow, direction, alive, display, slowness):
+    deleteList = []
+    nextBubble = None
+
+    if launchBubble == True:
+        while True:
+            DISPLAYSURF.fill(BGCOLOR)
+            newBubble.update()
+            if display == True:
+                newBubble.draw()
+            launchBubble, newBubble, score, deleteList = stopBubble(bubbleArray, newBubble, launchBubble, score)
+            if len(deleteList) > 0 or newBubble == None:
+                break
+            if newBubble.rect.right >= WINDOWWIDTH - 5:
+                newBubble.angle = 180 - newBubble.angle
+            elif newBubble.rect.left <= 5:
+                newBubble.angle = 180 - newBubble.angle
+        finalBubbleList = []
+        for row in range(len(bubbleArray)):
+            for column in range(len(bubbleArray[0])):
+                if bubbleArray[row][column] != BLANK:
+                    finalBubbleList.append(bubbleArray[row][column])
+                    for places in list(bubbleArray[DIE]):
+                        if places != '.': 
+                            alive = 'lose'
+
+            if len(finalBubbleList) < 1:
+                alive = 'win'
+        #time.sleep(slowness)                                     
+        gameColorList = updateColorList(bubbleArray)
+        random.shuffle(gameColorList)
+
+        if launchBubble == False:
+            nextBubble = Bubble(gameColorList[0])
+            nextBubble.rect.right = WINDOWWIDTH - 5
+            nextBubble.rect.bottom = WINDOWHEIGHT - 5
+
+    if launchBubble == True:
+        coverNextBubble()  
+    arrow.update(direction)
+    if display == True:
+        arrow.draw()
+
+    setArrayPos(bubbleArray)
+    if display == True:
+        drawBubbleArray(bubbleArray)
+
+        #score.draw()
+        pygame.display.update()
+        FPSCLOCK.tick(FPS)
+
+    return bubbleArray, alive, deleteList, nextBubble, score, len(finalBubbleList)
+    
 if __name__ == '__main__':
     main()
