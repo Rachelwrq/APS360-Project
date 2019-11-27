@@ -1,6 +1,7 @@
 from itertools import cycle
 import random
 import sys
+import argparse
 
 import pygame
 from pygame.locals import *
@@ -8,7 +9,8 @@ from pygame.locals import *
 from my_agent import *
 
 
-FPS = 100000
+#FPS = 100000
+FPS = 45
 SCREENWIDTH  = 288
 SCREENHEIGHT = 512
 PIPEGAPSIZE  = 100 # gap between upper and lower part of pipe
@@ -35,6 +37,10 @@ PIPES_LIST = (
     'assets/sprites/pipe-green.png',
 )
 
+
+#From argparse
+AGENT = "final"
+IS_TRAIN = False
 
 try:
     xrange
@@ -66,14 +72,14 @@ def main():
     # base (ground) sprite
     IMAGES['base'] = pygame.image.load('assets/sprites/base.png').convert_alpha()
     
-    # TODO: write code to parse input agent from command line
-    # Choices are
-    #   - RandomAgent
-    #   - HumanAgent
-    #   - ANNAgent + ANNType (i.e. benchmark) + ANNMode (i.e. train vs test)
-    # agent = RandomAgent()
-    # agent = HumanAgent()
-    agent = ANNAgent(is_baseline=False)
+    if AGENT == "random":
+        agent = RandomAgent()
+    elif AGENT == "human":
+        agent = HumanAgent()
+    elif AGENT == "baseline":
+        agent = ANNAgent(is_baseline=True)
+    else:
+        agent = ANNAgent(is_baseline=False)
 
     while True:
         # select random background sprites
@@ -115,7 +121,7 @@ def main():
         action = 0
         while not_crash:
             env,score,not_crash = gameState.next_state(action)
-            action = agent.Action(env,score,not_crash)
+            action = agent.Action(env,score,not_crash,IS_TRAIN)
 
 
 def showWelcomeAnimation():
@@ -384,8 +390,12 @@ def getHitmask(image):
     return mask
 
 if __name__ == '__main__':
-	#TODO: add argparse:
-	# --no-graphics
-	# --test
-	# --agent=<random|human|baseline|*final>
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-a", "--agent", choices=["random", "human", "baseline", "final"], help="Default:<final>")
+    parser.add_argument("--train", action="store_true", help="Default:False")
+    args = parser.parse_args()
+    if args.agent:
+        AGENT = args.agent
+    if args.train:
+        IS_TRAIN = True
     main()

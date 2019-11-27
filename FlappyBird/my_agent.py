@@ -11,18 +11,18 @@ import torch.optim as optim
 
 import pickle
 
-# All agent must provide a method .action(env,not_crash,...)
+# All agent must provide a method .action(env,not_crash,is_train)
 #   - `env` is the raw input coming from the game state. inp = x,y
 #       where x = list of horizontal distance to all pipes
 #             y = list of vertical distance to all lower pipes
 
 class RandomAgent():
-    def Action(self,env,score,not_crash):
+    def Action(self,env,score,not_crash,is_train):
         action = random.random() >= 0.93
         return action
 
 class HumanAgent():
-    def Action(self,env,score,not_crash):
+    def Action(self,env,score,not_crash,is_train):
         action = 0
         for event in pygame.event.get():
             if event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
@@ -43,7 +43,7 @@ class baselineANN(nn.Module):
         #   - Horizontal distance to 1st pipe
         #   - Vertical distance to 1st lower pipe
         # Output has 2 neurons (each represents the Q-value of 1 action)
-        self.FC = nn.Linear(2, 2)
+        self.FC = nn.Linear(4, 2)
         
     def forward(self, network_inp):
         return self.FC(network_inp)
@@ -81,7 +81,7 @@ class ANNAgent():
         self.final_epsilon = 0.0001 # prob for random action won't decrease under this value
         self.epsilon_anneal_rate = (self.init_epsilon-self.final_epsilon)/10000
         self.replay_mem_size = 10000 # experience replay
-        self.batch_size = 32 # minibatch size sampled randomly from replay_mem
+        self.batch_size = 128 # minibatch size sampled randomly from replay_mem
         
         # 1.2. Const values for network
         self.learning_rate = 3e-4
@@ -103,11 +103,11 @@ class ANNAgent():
         self.score = 0
         
         # 3. Values for model checkpoint
-        self.checkpoint_dir = os.path.dirname(os.path.realpath(__file__))+"/model_checkpoint"
-        self.model_file = self.checkpoint_dir+"/"+self.model.name+"_bs_"+str(self.batch_size)
-        self.replay_mem_file = self.checkpoint_dir+"/replay_mem"
+        self.checkpoint_dir = os.path.dirname(os.path.realpath(__file__))+"/model_checkpoint/"
+        self.model_file = self.checkpoint_dir+"/"+self.model.name
+        self.replay_mem_file = self.checkpoint_dir+self.model.name+"_replay_mem"
         self.loss_history = []
-        self.loss_history_file = self.checkpoint_dir+"/loss_history"
+        self.loss_history_file = self.checkpoint_dir+self.model.name+"_loss_history"
       	
       	# Load model if exists
         if os.path.exists(self.model_file):
@@ -121,15 +121,31 @@ class ANNAgent():
             with open (self.replay_mem_file, 'rb') as f:
                 self.replay_mem = pickle.load(f)
         
+        #temp variable, use only once at the 1st iter
+        self.init_state = None
+        
         # Load loss_history if exists
         #if os.path.exists(self.loss_history_file):
         #    with open (self.loss_history_file, 'rb') as f:
         #        self.loss_history = pickle.load(f)
         
-        #temp variable, use only once at the 1st iter
-        self.init_state = None
+        # replay_mem_database
+        #self.replay_mem_database = []
+        #self.replay_mem_database_file = self.checkpoint_dir+"replay_mem_database"
+        #if os.path.exists(self.replay_mem_database_file):
+        #    with open (self.replay_mem_database_file, 'rb') as f:
+        #        self.replay_mem_database = pickle.load(f)
+        
+        # score_history
+        #self.score_history = []
+        #self.score_history_file = self.checkpoint_dir+"score_history"
+        #if os.path.exists(self.score_history_file):
+        #    with open (self.score_history_file, 'rb') as f:
+        #        self.score_history = pickle.load(f)
+        
     
-    def Action(self,env,score,not_crash,is_train=False):
+    
+    def Action(self,env,score,not_crash,is_train):
         if self.iter == 0:
             #Fist iteration, just save the init_state
             self.init_state = self._get_network_input(env)
@@ -200,11 +216,17 @@ class ANNAgent():
                         pickle.dump(self.replay_mem, f)
                     #with open(self.loss_history_file, 'wb') as f:
                     #    pickle.dump(self.loss_history, f)
-                
-            #if self.iter %10000 == 0:
-            #    # Replay memory
-            #    with open(self.replay_mem_file, 'wb') as f:
-            #        pickle.dump(self.replay_mem, f)
+            #else:
+            #    if self.iter %10000 == 0:
+            #        self.replay_mem_database += self.replay_mem
+            #        with open(self.replay_mem_database_file, 'wb') as f:
+            #            pickle.dump(self.replay_mem_database, f)
+            
+            #else:
+            #    if not not_crash: #game over
+            #        self.score_history.append(score)
+            #        with open(self.score_history_file, 'wb') as f:
+            #            pickle.dump(self.score_history, f)
         
         self.iter += 1
         self.score = score
@@ -228,8 +250,8 @@ class ANNAgent():
         if x[0] > 150:
             offset = x[0] - 150
             x = [x[i] - offset for i in range(len(x)) ]
-        if self.is_baseline:
-            return [x[0],y[0]]
+        #if self.is_baseline:
+        #    return [x[0],y[0]]
         return [x[0],y[0],x[1],y[1]]
     
     def _unpack_replay_mem(self,replay_mems):
