@@ -70,110 +70,6 @@ learning_rate = 0.00008
 size_RM = 7500
 ITERATIONS = 400000
 
-# creating Replay memory
-def createMemory():
-
-    # start game
-    direction, launchBubble, newBubble, arrow, bubbleArray, nextBubble, score, alive, shots, getout, loss_game = restartGame()
-
-    # Display of the game
-    display = False
-    delay = 0
-
-    # counters
-    gameover = 0
-    games = 0
-    wins = 0
-    moves = 0
-    terminal = 0
-    layer = 0
-
-    # get the current game state
-    state = gameState(bubbleArray, newBubble.color)
-
-    while moves < 5000:
-        if display == True:
-            DISPLAYSURF.fill(BGCOLOR)
-
-        # performing random action
-        action = random.randint(0, NUMBEROFACTIONS - 1)
-        direction = (action * 8) + 10
-        launchBubble = True
-        newBubble.angle = direction
-
-        # process game
-        bubbleArray, alive, deleteList, nextBubble = processGame(launchBubble, newBubble, bubbleArray, score, arrow, direction, alive, display, delay)
-        shots = shots + 1
-
-        # getting reward for action
-        getout, wins, reward, gameover = getReward(alive, getout, wins, deleteList, gameover)
-
-        # new bubble for shooting
-        newBubble = Bubble(nextBubble.color)
-        newBubble.angle = arrow.angle
-
-        # getting new state
-        newState = gameState(bubbleArray, newBubble.color)
-
-        moves = moves + 1
-
-        # storage of the replay memory
-        if getout == True:
-            REPLAYMEMORY.append((state, action, reward, newState, 0))
-        else:
-            REPLAYMEMORY.append((state, action, reward, newState, discount))
-
-        # restart game when game is won or lost
-        if getout == True or shots == AMOUNTOFSHOTS:
-            games = games + 1
-            direction, launchBubble, newBubble, arrow, bubbleArray, nextBubble, score, alive, shots, getout, loss_game = restartGame()
-        state = gameState(bubbleArray, newBubble.color)
-    print("Size of the Replay Memory: ", len(REPLAYMEMORY))
-
-
-# for getting a batch for training
-def get_batch():
-    counter = 0
-    actions  = np.zeros((BATCHSIZE, 1))
-    discounts = np.zeros((BATCHSIZE, 1))
-    rewards = np.zeros((BATCHSIZE, 1))
-    states = np.zeros((BATCHSIZE, 8, GRIDSIZE * 2, ARRAYWIDTH *2))
-    newstates = np.zeros((BATCHSIZE, 8, GRIDSIZE * 2, ARRAYWIDTH *2))
-    while counter < BATCHSIZE:
-        random_action = random.randint(0, len(REPLAYMEMORY) - 1)
-        (state, action, reward, newstate, discount) = REPLAYMEMORY[random_action]
-        actions[counter][0] = action
-        rewards[counter][0] = reward
-        discounts[counter][0] = discount
-        states[counter] = state
-        newstates[counter] = newstate
-        counter = counter + 1
-    return states, actions, rewards, newstates, discounts 
-
-
-# adding extra lines of balls to the game
-def addLayer(bubbleArray):
-    gameColorList = updateColorList(bubbleArray)
-    if gameColorList[0] == WHITE:
-        return bubbleArray
-    bubbleArray = np.delete(bubbleArray, -1, 0)
-    bubbleArray = np.delete(bubbleArray, -1, 0)
-    newRow = []
-    for index in range(len(bubbleArray[0])):
-        newRow.append(BLANK)
-    newRow = np.asarray(newRow)
-    newRow = np.reshape(newRow, (1,16))
-    bubbleArray = np.concatenate((newRow, bubbleArray))
-    bubbleArray = np.concatenate((newRow, bubbleArray))
-    for n in range(2):
-        for index in range(len(bubbleArray[0])):
-            random.shuffle(gameColorList)
-            newBubble = Bubble(gameColorList[0], n, index)
-            bubbleArray[n][index] = newBubble
-    bubbleArray[1][15] = BLANK
-    return bubbleArray
-
-
 # to restart the game
 def restartGame():
     direction = None
@@ -200,9 +96,10 @@ class baselineANN(nn.Module):
     def __init__(self):
         super(baselineANN, self).__init__()
         self.name = "baseline"
-        self.layer = nn.Linear(GRIDSIZE * 2 * ARRAYWIDTH * 2, 3)
+        self.layer = nn.Linear(2816, 21)
     def forward(self, arr):
-        activation = self.layer(self)
+        x = arr.view(-1, 2816)
+        activation = self.layer(x)
         output = F.relu(activation)
         return output
 

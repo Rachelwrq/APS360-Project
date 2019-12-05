@@ -628,15 +628,15 @@ def main():
             pygame.event.pump()
             if alive == 'lose':
                 not_lose = False
-                action, reward_score = agent.Action(state, score.total, num_cancel, alive, not_lose, sameColor, firstAttempt, is_train = True)
+                action, reward_score = agent.Action(state, score.total, num_cancel, alive, not_lose, sameColor, firstAttempt, is_train = False)
                 break
             elif alive == 'win':
                 dateTimeObj = datetime.now()
                 print("win time: ",dateTimeObj)
-                action, reward_score = agent.Action(state, score.total, num_cancel, alive, not_lose, sameColor, firstAttempt, is_train = True)
+                action, reward_score = agent.Action(state, score.total, num_cancel, alive, not_lose, sameColor, firstAttempt, is_train = False)
                 break
             else:
-                action, reward_score = agent.Action(state, score.total, num_cancel, alive, not_lose, sameColor, firstAttempt, is_train = True)
+                action, reward_score = agent.Action(state, score.total, num_cancel, alive, not_lose, sameColor, firstAttempt, is_train = False)
             # print(reward_score)
             direction = (action * 8) + 10
             newBubble.angle = direction
